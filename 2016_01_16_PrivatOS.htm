@@ -1,0 +1,17 @@
+<h1>PrivatOS (used by Blackphone) vulnerable to allow apps with internet permissions to hijack radio</h1>
+
+<p>A recent analysis published by the cyber security engineering firm <a target="_blank" href="https://www.sentinelone.com/">SentinelOne</a> revealed a <a target="_blank" href="https://www.sentinelone.com/blog/vulnerability-in-blackphone-puts-devices-at-risk-for-takeover/">severe vulnerability</a> in <a target="_blank" href="https://en.wikipedia.org/wiki/PrivatOS">PrivatOS</a> that could potentially allow a shell user or an app with internet permissions to send commands directly to the radio. This would allow the malicious actor to hijack the radio, and perform actions like sending/receiving test messages, making calls, etc.</p>
+
+<p>PrivatOS is an Android based OS built by Silent Circle for the Blackphone. The Blackphone is <a target="_blank" href="https://www.silentcircle.com/products-and-solutions/devices/">marketted</a> as "the world's first smartphone ... [that is] private by design", and targets privacy focussed users. These claims make the impact of such vulnerabilities even more severe, as their customers probably bought the Blackphone (over a more "mainstream" smartphone), because it offered the features of a modern smartphone with this additional security. This raises the question of how reliable such security claims are, and if it is really worth to pay extra for these features. From security engineering point of view, this is an interesting example of how tricky detecting some vulnerabilities can be at the design stage.</p>
+
+<p>As part of this analysis, the SentinelOne team noticed that the following socket was left open and accessible on the Blackphone:
+
+<pre><code>shell@blackphone:/dev/socket $ ls -l at_pal
+srw-rw-rw- radio system 2015-07-31 17:51 at_pal
+
+</code></pre>
+
+<p>Through their research, they found that an "agps_daemon", a priviliged binary used by the phone for the nVidia Icera modem, listens to the at_pal socket, and routes all the data to a tty_port on /dev/ttySHM3. Furthermore, the radio listens to the ttySHM3 port. This means, that an app with internet permissions or a shell user can send commands through the accessible at_pal socket, and these commands will reach and be executed by the radio. The radio uses modified <a target="_blank" href="https://en.wikipedia.org/wiki/Hayes_command_set">Hayes Commands</a>-like syntax, so by grepping the system for commands starting with "AT", they found a whole lot of interesting ones that can be executed through this manner. These commands could do some pretty nasty things, including sending/receiving text messages, dial or connect calls, check the status of phone calls, and more. Please see the <a target="_blank" href="https://www.sentinelone.com/blog/vulnerability-in-blackphone-puts-devices-at-risk-for-takeover/">original article</a> for all the commands and possible actions.
+</p>
+
+<p>SentinelOne contacted Silent Circle and got this issue fixed via an <a target="_blank" href="https://support.blackphone.ch/customer/en/portal/articles/2242250-privatos-1-1-13-release-notes">OS update</a>; so, the affected users should update their phones. This incident showcases how crucial it is for developers to ensure that they're cleaning up the allocated resources after using them, or are allocating them only when needed--atleast from a security point of view. This approach, if used by the processes using the at_pal socket (like the agps_daemon), could have potentially prevented this vulnerability.</p>
